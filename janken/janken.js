@@ -11,7 +11,7 @@ input.onGesture(Gesture.Shake, () => {
 })
 function judge() {
 	let kindsOfHand = 0
-	for (let i = 0; i <= hands.length - 1; i++) {
+	for (let i = 1; i <= 3; i++) {
 		if (hands[i] != 0) {
 			kindsOfHand += 1
 		}
@@ -22,7 +22,7 @@ function judge() {
 	basic.pause(1000)
 	hands[myHand] = 1
 	kindsOfHand = 0
-	for (let i = 0; i <= hands.length - 1; i++) {
+	for (let i = 0; i <= 3; i++) {
 		if (hands[i] != 0) {
 			kindsOfHand += 1
 			if (i != myHand) {
@@ -42,11 +42,12 @@ function judge() {
 			basic.showIcon(IconNames.Skull)
 		}
 	}
+	myHand = 0
 }
 function reset() {
 	myHand = 0
 	yourHand = 0
-	hands = [0, 0, 0]
+	hands = []
 	basic.showIcon(IconNames.Yes)
 }
 input.onButtonPressed(Button.A, () => {
