@@ -22,14 +22,14 @@ function judge() {
 	basic.pause(1000)
 	hands[myHand] = 1
 	kindsOfHand = 0
-	for (let i = 0; i <= 3; i++) {
+	yourHand = myHand
+	for (let i = 1; i <= 3; i++) {
 		if (hands[i] != 0) {
 			kindsOfHand += 1
 			if (i != myHand) {
 				yourHand = i
 			}
 		}
-		hands[i] = 0 // 次の回のために手をクリアしておく
 	}
 	if (kindsOfHand != 0) {
 		if (kindsOfHand != 2) {
@@ -42,7 +42,7 @@ function judge() {
 			basic.showIcon(IconNames.Skull)
 		}
 	}
-	myHand = 0
+	hands = []
 }
 function reset() {
 	myHand = 0
