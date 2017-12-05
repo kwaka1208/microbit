@@ -1,6 +1,8 @@
 # じゃんけんゲーム
 ２台以上のchibi:bit、micro:bitを使ってじゃんけんをするゲームです。
 
+ブロックエディタで開きたい方は、"microbit-block-janken.hex"をお使いください。"janken.js"と"microbit-janken.hex"は、一部がコードで表示されます。
+
 ## 操作方法
 A,Bボタンの押し方によって、以下の通り自分の手が決まりアイコンが表示されます。
 

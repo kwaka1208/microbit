@@ -50,6 +50,7 @@ function reset() {
 	hands = []
 	basic.showIcon(IconNames.Yes)
 }
+
 input.onButtonPressed(Button.A, () => {
 	if (myHand == 0) {
 		myHand = 1
