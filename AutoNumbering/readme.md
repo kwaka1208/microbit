@@ -1,5 +1,5 @@
 # 自動ナンバリング
-3台以上のmicro:bitに自動的に番号を振るプログラムを作ってみました（パッケージじゃなくてMakeCodeの標準ブロックで作ったユーザープログラムです）。使い方の手順は以下の通りです。[microbit-AutoNumbering.hex](https://raw.githubusercontent.com/kwaka1208/microbit/master/AutoNumbering/microbit-AutoNumbering.hex)をダウンロードして、すべてのmicro:bitにインストールしてください。
+3台以上のmicro:bitに自動的に番号を振るプログラムを作ってみました（パッケージじゃなくてMakeCodeの標準ブロックで作ったユーザープログラムです）。使い方の手順は以下の通りです。[microbit-AutoNumbering.hex](https://raw.githubusercontent.com/kwaka1208/microbit/master/AutoNumbering/microbit-AutoNumbering.hex)をダウンロードして（ブラウザのリンク先を保存でダウンロードできます）、すべてのmicro:bitにインストールしてください。
 
 ## 操作方法
 1. ホストにするmicro:bitをひとつ選んでAボタンを押す。これでそのmicro:bitがホストになります。ホストには番号が割り振られません（内部的には0になります）。
