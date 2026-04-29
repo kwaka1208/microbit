@@ -464,9 +464,10 @@
                         >NAME</span
                     >
                     <button
-                        class="text-slate-400 hover:text-red-500 text-[10px] btn-remove-card hidden"
+                        class="text-slate-400 hover:text-red-500 text-sm btn-remove-card hidden p-1"
+                        title="Remove Item"
                     >
-                        <i class="fa-solid fa-xmark"></i>
+                        <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
                 <span
@@ -616,15 +617,16 @@
                     this.readBuffer = "";
 
                     // Dashboard Configuration
-                    // Default item: speed
+                    // Default items if none saved
                     this.dashItems = [
                         {
                             key: "spd",
                             i18nKey: "spdDisp",
                             customName: "",
-                            value: "---",
+                            value: "0",
                         },
                     ];
+                    this.loadConfig();
 
                     // State
                     this.laps = [];
@@ -718,6 +720,33 @@
                 }
 
                 // --- Dashboard Config Methods ---
+                saveConfig() {
+                    const config = this.dashItems.map((item) => ({
+                        key: item.key,
+                        i18nKey: item.i18nKey || "",
+                        customName: item.customName || "",
+                    }));
+                    localStorage.setItem(
+                        "telemetry_dash_config",
+                        JSON.stringify(config),
+                    );
+                }
+
+                loadConfig() {
+                    const saved = localStorage.getItem("telemetry_dash_config");
+                    if (saved) {
+                        try {
+                            const config = JSON.parse(saved);
+                            this.dashItems = config.map((item) => ({
+                                ...item,
+                                value: "0",
+                            }));
+                        } catch (e) {
+                            console.error("Failed to load dashboard config", e);
+                        }
+                    }
+                }
+
                 addDashboardItem() {
                     const keyInput = document.getElementById("cfg-key");
                     const nameInput = document.getElementById("cfg-name");
@@ -738,13 +767,14 @@
                     this.dashItems.push({
                         key: key,
                         customName: name || key.toUpperCase(), // Fallback to key if name is empty
-                        value: "---",
+                        value: "0",
                     });
 
                     // Clear inputs
                     keyInput.value = "";
                     nameInput.value = "";
 
+                    this.saveConfig();
                     this.renderDashboard();
                     this.log("System", `Added meter for [${key}]`, "info");
                 }
@@ -753,6 +783,7 @@
                     this.dashItems = this.dashItems.filter(
                         (item) => item.key !== key,
                     );
+                    this.saveConfig();
                     this.renderDashboard();
                 }
 
@@ -1095,6 +1126,13 @@
                             this.lapCount.innerHTML = `0 <span data-i18n="lapsUnit">${translations[currentLang]["lapsUnit"]}</span>`;
                             this.liveLapTime.textContent = "00:00.000";
                             this.liveTotalTime.textContent = "00:00.000";
+
+                            // Reset dashboard items to 0
+                            this.dashItems.forEach((item) => {
+                                item.value = "0";
+                            });
+                            this.renderDashboard();
+
                             this.isTimerRunning = true;
                             requestAnimationFrame(this.updateLiveTimer);
                             this.log(
