@@ -117,10 +117,10 @@
             <div class="glass-panel p-4 rounded-xl border-t-4 border-t-blue-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
                 <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"><i class="fa-solid fa-power-off mr-2"></i><span data-i18n="engineCtrl">ENGINE CONTROL</span></h2>
                 <div class="flex gap-2">
-                    <button onclick="app.sendCommand('engine', '1')" class="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded font-bold transition-all border border-green-500 dark:border-green-400 active:scale-95">
+                    <button onclick="app.sendCommand('eng', '1')" class="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded font-bold transition-all border border-green-500 dark:border-green-400 active:scale-95">
                         <span data-i18n="start">START</span>
                     </button>
-                    <button onclick="app.sendCommand('engine', '0')" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded font-bold transition-all border border-red-500 dark:border-red-400 active:scale-95">
+                    <button onclick="app.sendCommand('eng', '0')" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded font-bold transition-all border border-red-500 dark:border-red-400 active:scale-95">
                         <span data-i18n="stop">STOP</span>
                     </button>
                 </div>
@@ -133,8 +133,34 @@
                     <div class="flex gap-2">
                         <div class="flex-1">
                             <label class="text-[10px] text-slate-500" data-i18n="key">KEY (RX)</label>
-                            <input type="text" id="cfg-key" placeholder="e.g. temp" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
+                            <input type="text" id="cfg-key" placeholder="e.g. tmp" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
                         </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] text-slate-500" data-i18n="dispName">DISPLAY NAME</label>
+                            <input type="text" id="cfg-name" placeholder="Temperature" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
+                        </div>
+                    </div>
+                    <button onclick="app.addDashboardItem()" class="w-full bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white py-2 rounded font-bold transition-all border border-slate-500 active:scale-95 text-sm mt-1">
+                        <i class="fa-solid fa-plus mr-1"></i><span data-i18n="addDashItem">ADD ITEM</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Command -->
+            <div class="glass-panel p-4 rounded-xl border-t-4 border-t-purple-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[150px]">
+                <div class="flex justify-between items-center mb-3 border-b border-slate-300 dark:border-slate-700 pb-2">
+                    <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400"><i class="fa-solid fa-terminal mr-2"></i><span data-i18n="customCmd">CUSTOM CMD</span></h2>
+                    <!-- Inquiry Quick Button -->
+                    <button onclick="app.sendCommand('inq', 'all')" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition-colors" title="Request Status">
+                        <i class="fa-solid fa-satellite-dish mr-1"></i><span data-i18n="reqStatus">REQ STATUS</span>
+                    </button>
+                </div>
+                
+                <div class="flex flex-col gap-2">
+                    <div>
+                        <label class="text-[10px] text-slate-500" data-i18n="key">KEY</label>
+                        <input type="text" id="cmd-key" placeholder="e.g., spd" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-purple-500 dark:text-white">
+                    </div>
                         <div class="flex-1">
                             <label class="text-[10px] text-slate-500" data-i18n="dispName">DISPLAY NAME</label>
                             <input type="text" id="cfg-name" placeholder="Temperature" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
@@ -755,7 +781,7 @@
                     return;
                 }
 
-                if (key === 'engine') {
+                if (key === 'eng') {
                     if (value === '1') {
                         this.sessionStartTime = Date.now();
                         this.lastLapTime = this.sessionStartTime;
