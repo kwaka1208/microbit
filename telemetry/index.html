@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Telemetry System</title>
+    <title>Telemetry System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -128,7 +128,7 @@
 
             <!-- Dashboard Config -->
             <div class="glass-panel p-4 rounded-xl border-t-4 border-t-cyan-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
-                <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"><i class="fa-solid fa-table-cells-large mr-2"></i><span data-i18n="meterConfig">METER CONFIG</span></h2>
+                <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"><i class="fa-solid fa-table-cells-large mr-2"></i><span data-i18n="dashConfig">DASHBOARD CONFIG</span></h2>
                 <div class="flex flex-col gap-2">
                     <div class="flex gap-2">
                         <div class="flex-1">
@@ -141,7 +141,7 @@
                         </div>
                     </div>
                     <button onclick="app.addDashboardItem()" class="w-full bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white py-2 rounded font-bold transition-all border border-slate-500 active:scale-95 text-sm mt-1">
-                        <i class="fa-solid fa-plus mr-1"></i><span data-i18n="addMeter">ADD METER</span>
+                        <i class="fa-solid fa-plus mr-1"></i><span data-i18n="addDashItem">ADD ITEM</span>
                     </button>
                 </div>
             </div>
@@ -150,7 +150,7 @@
             <div class="glass-panel p-4 rounded-xl border-t-4 border-t-purple-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[150px]">
                 <div class="flex justify-between items-center mb-3 border-b border-slate-300 dark:border-slate-700 pb-2">
                     <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400"><i class="fa-solid fa-terminal mr-2"></i><span data-i18n="customCmd">CUSTOM CMD</span></h2>
-                    <!-- Inquiry Quick Button moved here to save space -->
+                    <!-- Inquiry Quick Button -->
                     <button onclick="app.sendCommand('inquiry', 'all')" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition-colors" title="Request Status">
                         <i class="fa-solid fa-satellite-dish mr-1"></i><span data-i18n="reqStatus">REQ STATUS</span>
                     </button>
@@ -186,17 +186,17 @@
         </div>
 
         <!-- Right Column: Laps & Logs (Span 3) -->
-        <div class="md:col-span-3 flex flex-col gap-5 h-full overflow-hidden">
+        <div id="right-column" class="md:col-span-3 flex flex-col h-full overflow-hidden relative">
             
-            <!-- Lap Times -->
-            <div class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-pink-500 flex flex-col h-1/2 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
-                <div class="flex justify-between items-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-2">
+            <!-- Lap Times (Initial height 3/5 = 60%) -->
+            <div id="lap-panel" class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-pink-500 flex flex-col bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 shrink-0" style="flex-basis: calc(60% - 10px); min-height: 25%;">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-2 shrink-0">
                     <h2 class="text-sm md:text-lg text-slate-600 dark:text-slate-400"><i class="fa-solid fa-stopwatch mr-2"></i><span data-i18n="lapTimes">LAP TIMES</span></h2>
                     <span id="lap-count" class="bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300 px-2 py-0.5 rounded text-xs shrink-0 font-bold border border-pink-200 dark:border-pink-800">0 <span data-i18n="lapsUnit">LAPS</span></span>
                 </div>
                 
                 <!-- Live Timer Display -->
-                <div class="bg-slate-100 dark:bg-slate-900 rounded-lg p-2 2xl:p-3 mb-4 border border-slate-300 dark:border-slate-700 flex flex-col 2xl:flex-row justify-between items-center shadow-inner gap-2 2xl:gap-0">
+                <div class="bg-slate-100 dark:bg-slate-900 rounded-lg p-2 2xl:p-3 mb-4 border border-slate-300 dark:border-slate-700 flex flex-col 2xl:flex-row justify-between items-center shadow-inner gap-2 2xl:gap-0 shrink-0">
                     <div class="w-full 2xl:flex-1 text-center 2xl:border-r 2xl:border-slate-300 dark:2xl:border-slate-700 pb-2 2xl:pb-0 border-b 2xl:border-b-0 border-slate-300 dark:border-slate-700 min-w-0">
                         <div class="text-[10px] text-slate-500 mb-1 tracking-wider" data-i18n="currentLap">CURRENT LAP</div>
                         <div id="live-lap-time" class="text-xl xl:text-2xl text-pink-500 dark:text-pink-400 font-mono tabular-nums truncate">00:00.000</div>
@@ -213,9 +213,14 @@
                 </div>
             </div>
 
-            <!-- Serial Log -->
-            <div class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-slate-500 flex flex-col h-1/2 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
-                <div class="flex justify-between items-center mb-2 border-b border-slate-300 dark:border-slate-700 pb-2">
+            <!-- Resizer -->
+            <div id="resizer" class="h-4 flex-none cursor-row-resize flex items-center justify-center group z-10 touch-none py-2 my-1">
+                <div class="w-16 h-1 bg-slate-300 dark:bg-slate-600 rounded-full group-hover:bg-cyan-500 dark:group-hover:bg-cyan-400 transition-colors shadow-sm"></div>
+            </div>
+
+            <!-- Serial Log (Takes remaining space) -->
+            <div id="log-panel" class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-slate-500 flex flex-col bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[20%]">
+                <div class="flex justify-between items-center mb-2 border-b border-slate-300 dark:border-slate-700 pb-2 shrink-0">
                     <h2 class="text-sm text-slate-600 dark:text-slate-400"><i class="fa-solid fa-list mr-2"></i><span data-i18n="txRxLog">TX/RX LOG</span></h2>
                     <button onclick="app.clearLog()" class="text-xs text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
                 </div>
@@ -257,8 +262,8 @@
                 engineCtrl: "ENGINE CONTROL",
                 start: "START",
                 stop: "STOP",
-                meterConfig: "METER CONFIG",
-                addMeter: "ADD METER",
+                dashConfig: "DASHBOARD CONFIG",
+                addDashItem: "ADD ITEM",
                 customCmd: "CUSTOM CMD",
                 reqStatus: "REQ STATUS",
                 key: "KEY",
@@ -274,41 +279,22 @@
                 lapsUnit: "LAPS",
                 txRxLog: "TX/RX LOG",
                 spdDisp: "Speed"
-            },
-            ja: {
-                title: "テレメトリー",
-                connect: "接続",
-                disconnect: "切断",
-                disconnected: "未接続",
-                connected: "接続済み",
-                engineCtrl: "エンジン制御",
-                start: "スタート",
-                stop: "ストップ",
-                meterConfig: "メーター設定",
-                addMeter: "追加",
-                customCmd: "カスタム送信",
-                reqStatus: "状態要求",
-                key: "キー",
-                value: "値",
-                dispName: "表示名",
-                send: "送信",
-                dashboard: "ダッシュボード",
-                dashDesc: "設定済みの項目のみ表示します",
-                lapTimes: "ラップタイム",
-                currentLap: "現在ラップ",
-                totalTime: "合計時間",
-                noLaps: "記録はありません",
-                lapsUnit: "周",
-                txRxLog: "送受信ログ",
-                spdDisp: "スピード"
             }
         };
 
-        let currentLang = 'ja';
+        // ブラウザの言語を取得し、日本語以外なら英語をデフォルトにする
+        let currentLang = (navigator.language || navigator.userLanguage).startsWith('ja') ? 'ja' : 'en';
+
+        function initLangUI() {
+            // 切り替えボタンの初期テキストを設定（現在の言語が英語なら「JA」ボタンを表示）
+            document.getElementById('btn-lang').textContent = currentLang === 'en' ? 'JA' : 'EN';
+            // htmlタグのlang属性も更新
+            document.documentElement.lang = currentLang;
+        }
 
         function toggleLang() {
             currentLang = currentLang === 'en' ? 'ja' : 'en';
-            document.getElementById('btn-lang').textContent = currentLang === 'en' ? 'JA' : 'EN';
+            initLangUI();
             applyTranslations();
             if (window.app) window.app.renderDashboard(); // Re-render to update default item names
         }
@@ -386,8 +372,60 @@
                 // Bind Events
                 this.btnConnect.addEventListener('click', () => this.toggleConnection());
 
-                // Initial Render
+                // Initial Render & Setup
                 this.renderDashboard();
+                this.initResizer();
+            }
+
+            // --- Panel Resizer Method ---
+            initResizer() {
+                const resizer = document.getElementById('resizer');
+                const lapPanel = document.getElementById('lap-panel');
+                const rightColumn = document.getElementById('right-column');
+                
+                let isResizing = false;
+
+                const startResize = (e) => {
+                    isResizing = true;
+                    document.body.style.cursor = 'row-resize';
+                    document.body.style.userSelect = 'none';
+                    // Prevent scrolling on touch devices
+                    if (e.type === 'touchstart') e.preventDefault();
+                };
+
+                const resize = (e) => {
+                    if (!isResizing) return;
+                    
+                    // Get Y coordinate for both mouse and touch events
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    
+                    const containerRect = rightColumn.getBoundingClientRect();
+                    // Calculate percentage based on column height
+                    let newFlexBasis = ((clientY - containerRect.top) / containerRect.height) * 100;
+                    
+                    // Constraints (min 20%, max 80%)
+                    if (newFlexBasis < 20) newFlexBasis = 20;
+                    if (newFlexBasis > 80) newFlexBasis = 80;
+                    
+                    lapPanel.style.flexBasis = `calc(${newFlexBasis}% - 10px)`;
+                };
+
+                const stopResize = () => {
+                    if (isResizing) {
+                        isResizing = false;
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                };
+
+                resizer.addEventListener('mousedown', startResize);
+                resizer.addEventListener('touchstart', startResize, { passive: false });
+
+                window.addEventListener('mousemove', resize);
+                window.addEventListener('touchmove', resize, { passive: false });
+
+                window.addEventListener('mouseup', stopResize);
+                window.addEventListener('touchend', stopResize);
             }
 
             // --- Dashboard Config Methods ---
@@ -423,7 +461,6 @@
             }
 
             removeDashboardItem(key) {
-                // Prevent removing default if necessary (optional), but let's allow removing any for flexibility
                 this.dashItems = this.dashItems.filter(item => item.key !== key);
                 this.renderDashboard();
             }
@@ -524,6 +561,7 @@
                 }
 
                 this.connected = false;
+                this.isTimerRunning = false; // 切断時にタイマーを停止
                 this.port = null;
                 this.reader = null;
                 this.writer = null;
@@ -762,6 +800,7 @@
         }
 
         // Initialize Application & Translations
+        initLangUI();
         applyTranslations();
         window.app = new TelemetryApp();
         window.app.log('System', 'Application initialized.', 'info');
