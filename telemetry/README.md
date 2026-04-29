@@ -27,12 +27,15 @@
 4. 接続に成功するとステータスが「CONNECTED」になり、LEDアイコンが緑色に点灯します。
 
 接続ボタン
+
 ![](connect01.png)
 
 ポップアップの表示（内容はPCによって異なります）
+
 ![](connect02.png)
 
 接続完了後
+
 ![](connect03.png)
 
 ### 2. ダッシュボード設定 (DASHBOARD CONFIG)
