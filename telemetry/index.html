@@ -1,868 +1,1188 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telemetry System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        mono: ['Share Tech Mono', 'monospace'],
-                        title: ['Orbitron', 'sans-serif'],
-                    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Telemetry System</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            mono: ["Share Tech Mono", "monospace"],
+                            title: ["Orbitron", "sans-serif"],
+                        },
+                    },
+                },
+            };
+        </script>
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+            rel="stylesheet"
+        />
+        <style>
+            @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap");
+
+            body {
+                font-family: "Share Tech Mono", monospace;
+                transition:
+                    background-color 0.3s,
+                    color 0.3s;
+            }
+
+            /* Glass Panel Styles for Dark/Light */
+            .glass-panel {
+                backdrop-filter: blur(10px);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+
+            /* Custom Scrollbar that adapts to theme */
+            :root {
+                --scrollbar-track: #e2e8f0;
+                --scrollbar-thumb: #94a3b8;
+            }
+            .dark {
+                --scrollbar-track: #1e293b;
+                --scrollbar-thumb: #475569;
+            }
+
+            .log-container {
+                scrollbar-width: thin;
+                scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+            }
+            .log-container::-webkit-scrollbar {
+                width: 8px;
+            }
+            .log-container::-webkit-scrollbar-track {
+                background: var(--scrollbar-track);
+            }
+            .log-container::-webkit-scrollbar-thumb {
+                background-color: var(--scrollbar-thumb);
+                border-radius: 4px;
+            }
+
+            /* LED Indicator */
+            .led {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background-color: #ef4444;
+                box-shadow: 0 0 5px #ef4444;
+                transition: all 0.3s ease;
+            }
+            .led.active {
+                background-color: #22c55e;
+                box-shadow: 0 0 10px #22c55e;
+            }
+
+            /* Value Flash Animation */
+            @keyframes flash {
+                0% {
+                    color: #38bdf8;
+                    text-shadow: 0 0 10px #38bdf8;
+                }
+                100% {
+                    color: inherit;
+                    text-shadow: none;
                 }
             }
-        }
-    </script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
-        
-        body {
-            font-family: 'Share Tech Mono', monospace;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        /* Glass Panel Styles for Dark/Light */
-        .glass-panel {
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Custom Scrollbar that adapts to theme */
-        :root {
-            --scrollbar-track: #e2e8f0;
-            --scrollbar-thumb: #94a3b8;
-        }
-        .dark {
-            --scrollbar-track: #1e293b;
-            --scrollbar-thumb: #475569;
-        }
-        
-        .log-container {
-            scrollbar-width: thin;
-            scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-        }
-        .log-container::-webkit-scrollbar { width: 8px; }
-        .log-container::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-        .log-container::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 4px; }
-
-        /* LED Indicator */
-        .led {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: #ef4444;
-            box-shadow: 0 0 5px #ef4444;
-            transition: all 0.3s ease;
-        }
-        .led.active {
-            background-color: #22c55e;
-            box-shadow: 0 0 10px #22c55e;
-        }
-
-        /* Value Flash Animation */
-        @keyframes flash {
-            0% { color: #38bdf8; text-shadow: 0 0 10px #38bdf8; }
-            100% { color: inherit; text-shadow: none; }
-        }
-        .value-flash {
-            animation: flash 0.3s ease-out;
-        }
-    </style>
-</head>
-<body class="min-h-screen p-4 md:p-6 flex flex-col h-screen overflow-hidden bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-
-    <!-- Header -->
-    <header class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 glass-panel p-4 rounded-xl shrink-0 bg-white/70 border border-slate-300 dark:bg-slate-800/70 dark:border-slate-700">
-        <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
-            <i class="fa-solid fa-car-side text-2xl md:text-3xl text-cyan-600 dark:text-cyan-400 shrink-0"></i>
-            <h1 class="text-xl md:text-3xl font-bold font-title tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-500 truncate">
-                <span data-i18n="title">TELEMETRY</span><span class="text-slate-500 dark:text-slate-400 font-light text-base md:text-xl">.sys</span>
-            </h1>
-        </div>
-        <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-            
-            <!-- Global Controls (Theme & Lang) -->
-            <div class="flex items-center gap-3 mr-2 border-r border-slate-300 dark:border-slate-600 pr-4">
-                <button onclick="toggleLang()" class="text-slate-600 dark:text-slate-300 hover:text-cyan-500 font-bold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors" id="btn-lang">
-                    EN
-                </button>
-                <button onclick="toggleTheme()" class="text-slate-600 dark:text-slate-300 hover:text-yellow-500 text-xl transition-colors" id="btn-theme">
-                    <i class="fa-solid fa-moon"></i>
-                </button>
+            .value-flash {
+                animation: flash 0.3s ease-out;
+            }
+        </style>
+    </head>
+    <body
+        class="min-h-screen p-4 md:p-6 flex flex-col h-screen overflow-hidden bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200"
+    >
+        <!-- Header -->
+        <header
+            class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 glass-panel p-4 rounded-xl shrink-0 bg-white/70 border border-slate-300 dark:bg-slate-800/70 dark:border-slate-700"
+        >
+            <div
+                class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start"
+            >
+                <i
+                    class="fa-solid fa-car-side text-2xl md:text-3xl text-cyan-600 dark:text-cyan-400 shrink-0"
+                ></i>
+                <h1
+                    class="text-xl md:text-3xl font-bold font-title tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-500 truncate"
+                >
+                    <span data-i18n="title">TELEMETRY</span
+                    ><span
+                        class="text-slate-500 dark:text-slate-400 font-light text-base md:text-xl"
+                        >.sys</span
+                    >
+                </h1>
             </div>
-
-            <div class="flex items-center gap-2">
-                <div id="connection-led" class="led shrink-0"></div>
-                <span id="connection-status" class="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap" data-i18n="disconnected">DISCONNECTED</span>
-            </div>
-            <button id="btn-connect" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 md:px-6 py-2 rounded font-bold transition-colors shadow-[0_0_10px_rgba(8,145,178,0.3)] dark:shadow-[0_0_15px_rgba(8,145,178,0.5)] border border-cyan-500 dark:border-cyan-400 shrink-0 text-sm md:text-base">
-                <i class="fa-solid fa-plug mr-1 md:mr-2"></i><span data-i18n="connect">CONNECT</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Content Grid -->
-    <main class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0">
-        
-        <!-- Left Column: Controls (Span 3) -->
-        <div class="md:col-span-3 flex flex-col gap-5 h-full overflow-y-auto pr-2 pb-2">
-            
-            <!-- Engine Control -->
-            <div class="glass-panel p-4 rounded-xl border-t-4 border-t-blue-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
-                <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"><i class="fa-solid fa-power-off mr-2"></i><span data-i18n="engineCtrl">ENGINE CONTROL</span></h2>
-                <div class="flex gap-2">
-                    <button onclick="app.sendCommand('eng', '1')" class="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded font-bold transition-all border border-green-500 dark:border-green-400 active:scale-95">
-                        <span data-i18n="start">START</span>
+            <div
+                class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end"
+            >
+                <!-- Global Controls (Theme & Lang) -->
+                <div
+                    class="flex items-center gap-3 mr-2 border-r border-slate-300 dark:border-slate-600 pr-4"
+                >
+                    <button
+                        onclick="toggleLang()"
+                        class="text-slate-600 dark:text-slate-300 hover:text-cyan-500 font-bold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 transition-colors"
+                        id="btn-lang"
+                    >
+                        EN
                     </button>
-                    <button onclick="app.sendCommand('eng', '0')" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded font-bold transition-all border border-red-500 dark:border-red-400 active:scale-95">
-                        <span data-i18n="stop">STOP</span>
+                    <button
+                        onclick="toggleTheme()"
+                        class="text-slate-600 dark:text-slate-300 hover:text-yellow-500 text-xl transition-colors"
+                        id="btn-theme"
+                    >
+                        <i class="fa-solid fa-moon"></i>
                     </button>
                 </div>
-            </div>
 
-            <!-- Dashboard Config -->
-            <div class="glass-panel p-4 rounded-xl border-t-4 border-t-cyan-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
-                <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"><i class="fa-solid fa-table-cells-large mr-2"></i><span data-i18n="dashConfig">DASHBOARD CONFIG</span></h2>
-                <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                    <div id="connection-led" class="led shrink-0"></div>
+                    <span
+                        id="connection-status"
+                        class="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                        data-i18n="disconnected"
+                        >DISCONNECTED</span
+                    >
+                </div>
+                <button
+                    id="btn-connect"
+                    class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 md:px-6 py-2 rounded font-bold transition-colors shadow-[0_0_10px_rgba(8,145,178,0.3)] dark:shadow-[0_0_15px_rgba(8,145,178,0.5)] border border-cyan-500 dark:border-cyan-400 shrink-0 text-sm md:text-base"
+                >
+                    <i class="fa-solid fa-plug mr-1 md:mr-2"></i
+                    ><span data-i18n="connect">CONNECT</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 min-h-0">
+            <!-- Left Column: Controls (Span 3) -->
+            <div
+                class="md:col-span-3 flex flex-col gap-5 h-full overflow-y-auto pr-2 pb-2"
+            >
+                <!-- Engine Control -->
+                <div
+                    class="glass-panel p-4 rounded-xl border-t-4 border-t-blue-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700"
+                >
+                    <h2
+                        class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"
+                    >
+                        <i class="fa-solid fa-power-off mr-2"></i
+                        ><span data-i18n="engineCtrl">ENGINE CONTROL</span>
+                    </h2>
                     <div class="flex gap-2">
-                        <div class="flex-1">
-                            <label class="text-[10px] text-slate-500" data-i18n="key">KEY (RX)</label>
-                            <input type="text" id="cfg-key" placeholder="e.g. tmp" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
+                        <button
+                            onclick="app.sendCommand('eng', '1')"
+                            class="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded font-bold transition-all border border-green-500 dark:border-green-400 active:scale-95"
+                        >
+                            <span data-i18n="start">START</span>
+                        </button>
+                        <button
+                            onclick="app.sendCommand('eng', '0')"
+                            class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded font-bold transition-all border border-red-500 dark:border-red-400 active:scale-95"
+                        >
+                            <span data-i18n="stop">STOP</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Config -->
+                <div
+                    class="glass-panel p-4 rounded-xl border-t-4 border-t-cyan-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700"
+                >
+                    <h2
+                        class="text-sm md:text-base text-slate-600 dark:text-slate-400 mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"
+                    >
+                        <i class="fa-solid fa-table-cells-large mr-2"></i
+                        ><span data-i18n="dashConfig">DASHBOARD CONFIG</span>
+                    </h2>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <label
+                                    class="text-[10px] text-slate-500"
+                                    data-i18n="key"
+                                    >KEY (RX)</label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-key"
+                                    placeholder="e.g. tmp"
+                                    class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <label
+                                    class="text-[10px] text-slate-500"
+                                    data-i18n="dispName"
+                                    >DISPLAY NAME</label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-name"
+                                    placeholder="Temperature"
+                                    class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white"
+                                />
+                            </div>
                         </div>
-                        <div class="flex-1">
-                            <label class="text-[10px] text-slate-500" data-i18n="dispName">DISPLAY NAME</label>
-                            <input type="text" id="cfg-name" placeholder="Temperature" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
+                        <button
+                            onclick="app.addDashboardItem()"
+                            class="w-full bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white py-2 rounded font-bold transition-all border border-slate-500 active:scale-95 text-sm mt-1"
+                        >
+                            <i class="fa-solid fa-plus mr-1"></i
+                            ><span data-i18n="addDashItem">ADD ITEM</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Command -->
+                <div
+                    class="glass-panel p-4 rounded-xl border-t-4 border-t-purple-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[150px]"
+                >
+                    <div
+                        class="flex justify-between items-center mb-3 border-b border-slate-300 dark:border-slate-700 pb-2"
+                    >
+                        <h2
+                            class="text-sm md:text-base text-slate-600 dark:text-slate-400"
+                        >
+                            <i class="fa-solid fa-terminal mr-2"></i
+                            ><span data-i18n="customCmd">CUSTOM CMD</span>
+                        </h2>
+                        <!-- Inquiry Quick Button -->
+                        <button
+                            onclick="app.sendCommand('inq', 'all')"
+                            class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition-colors"
+                            title="Request Status"
+                        >
+                            <i class="fa-solid fa-satellite-dish mr-1"></i
+                            ><span data-i18n="reqStatus">REQ STATUS</span>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <div>
+                            <label
+                                class="text-[10px] text-slate-500"
+                                data-i18n="key"
+                                >KEY</label
+                            >
+                            <input
+                                type="text"
+                                id="cmd-key"
+                                placeholder="e.g., spd"
+                                class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-purple-500 dark:text-white"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="text-[10px] text-slate-500"
+                                data-i18n="value"
+                                >VALUE</label
+                            >
+                            <input
+                                type="text"
+                                id="cmd-val"
+                                placeholder="e.g., 100"
+                                class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-purple-500 dark:text-white"
+                            />
+                        </div>
+                        <button
+                            onclick="app.sendCustomCommand()"
+                            class="mt-1 w-full bg-purple-600 hover:bg-purple-500 text-white py-2 rounded font-bold transition-all border border-purple-500 dark:border-purple-400 active:scale-95 text-sm"
+                        >
+                            <span data-i18n="send">SEND</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column: Dynamic Dashboard (Span 6) -->
+            <div
+                class="md:col-span-6 glass-panel p-5 md:p-6 rounded-xl flex flex-col h-full border-t-4 border-t-cyan-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700"
+            >
+                <div
+                    class="flex justify-between items-center mb-6 border-b border-slate-300 dark:border-slate-700 pb-2"
+                >
+                    <h2
+                        class="text-lg md:text-xl text-slate-700 dark:text-slate-300 font-title"
+                    >
+                        <i class="fa-solid fa-gauge-high mr-2"></i
+                        ><span data-i18n="dashboard">DASHBOARD</span>
+                    </h2>
+                    <span
+                        class="text-[10px] md:text-xs text-slate-500"
+                        data-i18n="dashDesc"
+                        >Shows configured items only</span
+                    >
+                </div>
+
+                <!-- Dynamic Grid for Data -->
+                <div
+                    id="dashboard-grid"
+                    class="grid grid-cols-2 gap-4 auto-rows-max overflow-y-auto pr-2 pb-2"
+                >
+                    <!-- Data cards will be injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Right Column: Laps & Logs (Span 3) -->
+            <div
+                id="right-column"
+                class="md:col-span-3 flex flex-col h-full overflow-hidden relative"
+            >
+                <!-- Lap Times (Initial height 3/5 = 60%) -->
+                <div
+                    id="lap-panel"
+                    class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-pink-500 flex flex-col bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 shrink-0"
+                    style="flex-basis: calc(60% - 10px); min-height: 25%"
+                >
+                    <div
+                        class="flex justify-between items-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-2 shrink-0"
+                    >
+                        <h2
+                            class="text-sm md:text-lg text-slate-600 dark:text-slate-400"
+                        >
+                            <i class="fa-solid fa-stopwatch mr-2"></i
+                            ><span data-i18n="lapTimes">LAP TIMES</span>
+                        </h2>
+                        <span
+                            id="lap-count"
+                            class="bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300 px-2 py-0.5 rounded text-xs shrink-0 font-bold border border-pink-200 dark:border-pink-800"
+                            >0 <span data-i18n="lapsUnit">LAPS</span></span
+                        >
+                    </div>
+
+                    <!-- Live Timer Display -->
+                    <div
+                        class="bg-slate-100 dark:bg-slate-900 rounded-lg p-2 2xl:p-3 mb-4 border border-slate-300 dark:border-slate-700 flex flex-col 2xl:flex-row justify-between items-center shadow-inner gap-2 2xl:gap-0 shrink-0"
+                    >
+                        <div
+                            class="w-full 2xl:flex-1 text-center 2xl:border-r 2xl:border-slate-300 dark:2xl:border-slate-700 pb-2 2xl:pb-0 border-b 2xl:border-b-0 border-slate-300 dark:border-slate-700 min-w-0"
+                        >
+                            <div
+                                class="text-[10px] text-slate-500 mb-1 tracking-wider"
+                                data-i18n="currentLap"
+                            >
+                                CURRENT LAP
+                            </div>
+                            <div
+                                id="live-lap-time"
+                                class="text-xl xl:text-2xl text-pink-500 dark:text-pink-400 font-mono tabular-nums"
+                            >
+                                00:00.000
+                            </div>
+                        </div>
+                        <div
+                            class="w-full 2xl:flex-1 text-center pt-1 2xl:pt-0 min-w-0"
+                        >
+                            <div
+                                class="text-[10px] text-slate-500 mb-1 tracking-wider"
+                                data-i18n="totalTime"
+                            >
+                                TOTAL TIME
+                            </div>
+                            <div
+                                id="live-total-time"
+                                class="text-xl xl:text-2xl text-cyan-600 dark:text-cyan-400 font-mono tabular-nums"
+                            >
+                                00:00.000
+                            </div>
                         </div>
                     </div>
-                    <button onclick="app.addDashboardItem()" class="w-full bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white py-2 rounded font-bold transition-all border border-slate-500 active:scale-95 text-sm mt-1">
-                        <i class="fa-solid fa-plus mr-1"></i><span data-i18n="addDashItem">ADD ITEM</span>
-                    </button>
-                </div>
-            </div>
 
-            <!-- Custom Command -->
-            <div class="glass-panel p-4 rounded-xl border-t-4 border-t-purple-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[150px]">
-                <div class="flex justify-between items-center mb-3 border-b border-slate-300 dark:border-slate-700 pb-2">
-                    <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400"><i class="fa-solid fa-terminal mr-2"></i><span data-i18n="customCmd">CUSTOM CMD</span></h2>
-                    <!-- Inquiry Quick Button -->
-                    <button onclick="app.sendCommand('inq', 'all')" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition-colors" title="Request Status">
-                        <i class="fa-solid fa-satellite-dish mr-1"></i><span data-i18n="reqStatus">REQ STATUS</span>
-                    </button>
-                </div>
-                
-                <div class="flex flex-col gap-2">
-                    <div>
-                        <label class="text-[10px] text-slate-500" data-i18n="key">KEY</label>
-                        <input type="text" id="cmd-key" placeholder="e.g., spd" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-purple-500 dark:text-white">
-                    </div>
-                        <div class="flex-1">
-                            <label class="text-[10px] text-slate-500" data-i18n="dispName">DISPLAY NAME</label>
-                            <input type="text" id="cfg-name" placeholder="Temperature" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-cyan-500 dark:text-white">
+                    <div
+                        id="lap-list"
+                        class="flex-1 overflow-y-auto log-container space-y-2 pr-2"
+                    >
+                        <!-- Lap items will appear here -->
+                        <div
+                            class="text-sm text-slate-500 text-center mt-4"
+                            id="lap-empty-msg"
+                            data-i18n="noLaps"
+                        >
+                            No laps recorded
                         </div>
                     </div>
-                    <button onclick="app.addDashboardItem()" class="w-full bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 text-white py-2 rounded font-bold transition-all border border-slate-500 active:scale-95 text-sm mt-1">
-                        <i class="fa-solid fa-plus mr-1"></i><span data-i18n="addDashItem">ADD ITEM</span>
+                </div>
+
+                <!-- Resizer -->
+                <div
+                    id="resizer"
+                    class="h-4 flex-none cursor-row-resize flex items-center justify-center group z-10 touch-none py-2 my-1"
+                >
+                    <div
+                        class="w-16 h-1 bg-slate-300 dark:bg-slate-600 rounded-full group-hover:bg-cyan-500 dark:group-hover:bg-cyan-400 transition-colors shadow-sm"
+                    ></div>
+                </div>
+
+                <!-- Serial Log (Takes remaining space) -->
+                <div
+                    id="log-panel"
+                    class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-slate-500 flex flex-col bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[20%]"
+                >
+                    <div
+                        class="flex justify-between items-center mb-2 border-b border-slate-300 dark:border-slate-700 pb-2 shrink-0"
+                    >
+                        <h2 class="text-sm text-slate-600 dark:text-slate-400">
+                            <i class="fa-solid fa-list mr-2"></i
+                            ><span data-i18n="txRxLog">TX/RX LOG</span>
+                        </h2>
+                        <button
+                            onclick="app.clearLog()"
+                            class="text-xs text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                    <div
+                        id="serial-log"
+                        class="flex-1 overflow-y-auto log-container text-xs font-mono pr-2 space-y-1"
+                    >
+                        <!-- Logs appear here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Template for Dynamic Dashboard Card -->
+        <template id="card-template">
+            <div
+                class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 border border-slate-300 dark:border-slate-700 flex flex-col relative overflow-hidden group min-w-0 shadow-sm"
+            >
+                <div
+                    class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none text-slate-800 dark:text-white"
+                >
+                    <i class="fa-solid fa-microchip text-4xl"></i>
+                </div>
+                <div class="flex justify-between items-start mb-1">
+                    <span
+                        class="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest data-name truncate flex-1 font-bold"
+                        >NAME</span
+                    >
+                    <button
+                        class="text-slate-400 hover:text-red-500 text-[10px] btn-remove-card hidden"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
-            </div>
+                <span
+                    class="text-[10px] text-slate-400 dark:text-slate-500 data-key font-mono mb-2"
+                    >key: ---</span
+                >
 
-            <!-- Custom Command -->
-            <div class="glass-panel p-4 rounded-xl border-t-4 border-t-purple-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[150px]">
-                <div class="flex justify-between items-center mb-3 border-b border-slate-300 dark:border-slate-700 pb-2">
-                    <h2 class="text-sm md:text-base text-slate-600 dark:text-slate-400"><i class="fa-solid fa-terminal mr-2"></i><span data-i18n="customCmd">CUSTOM CMD</span></h2>
-                    <!-- Inquiry Quick Button -->
-                    <button onclick="app.sendCommand('inquiry', 'all')" class="text-[10px] bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition-colors" title="Request Status">
-                        <i class="fa-solid fa-satellite-dish mr-1"></i><span data-i18n="reqStatus">REQ STATUS</span>
-                    </button>
-                </div>
-                
-                <div class="flex flex-col gap-2">
-                    <div>
-                        <label class="text-[10px] text-slate-500" data-i18n="key">KEY</label>
-                        <input type="text" id="cmd-key" placeholder="e.g., speed" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-purple-500 dark:text-white">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-slate-500" data-i18n="value">VALUE</label>
-                        <input type="text" id="cmd-val" placeholder="e.g., 100" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded p-1.5 text-sm focus:outline-none focus:border-purple-500 dark:text-white">
-                    </div>
-                    <button onclick="app.sendCustomCommand()" class="mt-1 w-full bg-purple-600 hover:bg-purple-500 text-white py-2 rounded font-bold transition-all border border-purple-500 dark:border-purple-400 active:scale-95 text-sm">
-                        <span data-i18n="send">SEND</span>
-                    </button>
+                <div class="flex items-end gap-2 w-full min-w-0 mt-auto">
+                    <span
+                        class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white data-value font-title truncate block w-full"
+                        >---</span
+                    >
                 </div>
             </div>
-        </div>
+        </template>
 
-        <!-- Middle Column: Dynamic Dashboard (Span 6) -->
-        <div class="md:col-span-6 glass-panel p-5 md:p-6 rounded-xl flex flex-col h-full border-t-4 border-t-cyan-500 bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-300 dark:border-slate-700 pb-2">
-                <h2 class="text-lg md:text-xl text-slate-700 dark:text-slate-300 font-title"><i class="fa-solid fa-gauge-high mr-2"></i><span data-i18n="dashboard">DASHBOARD</span></h2>
-                <span class="text-[10px] md:text-xs text-slate-500" data-i18n="dashDesc">Shows configured items only</span>
-            </div>
-            
-            <!-- Dynamic Grid for Data -->
-            <div id="dashboard-grid" class="grid grid-cols-2 gap-4 auto-rows-max overflow-y-auto pr-2 pb-2">
-                <!-- Data cards will be injected here by JS -->
-            </div>
-        </div>
+        <script>
+            // --- i18n Data ---
+            const translations = {
+                en: {
+                    title: "TELEMETRY",
+                    connect: "CONNECT",
+                    disconnect: "DISCONNECT",
+                    disconnected: "DISCONNECTED",
+                    connected: "CONNECTED",
+                    engineCtrl: "ENGINE CONTROL",
+                    start: "START",
+                    stop: "STOP",
+                    dashConfig: "DASHBOARD CONFIG",
+                    addDashItem: "ADD ITEM",
+                    customCmd: "CUSTOM CMD",
+                    reqStatus: "REQ STATUS",
+                    key: "KEY",
+                    value: "VALUE",
+                    dispName: "DISPLAY NAME",
+                    send: "SEND",
+                    dashboard: "DASHBOARD",
+                    dashDesc: "Shows configured items only",
+                    lapTimes: "LAP TIMES",
+                    currentLap: "CURRENT LAP",
+                    totalTime: "TOTAL TIME",
+                    noLaps: "No laps recorded",
+                    lapsUnit: "LAPS",
+                    txRxLog: "TX/RX LOG",
+                    spdDisp: "Speed",
+                },
+                ja: {
+                    title: "テレメトリー",
+                    connect: "接続",
+                    disconnect: "切断",
+                    disconnected: "未接続",
+                    connected: "接続済み",
+                    engineCtrl: "エンジン制御",
+                    start: "スタート",
+                    stop: "ストップ",
+                    dashConfig: "ダッシュボード設定",
+                    addDashItem: "追加",
+                    customCmd: "カスタム送信",
+                    reqStatus: "状態要求",
+                    key: "キー",
+                    value: "値",
+                    dispName: "表示名",
+                    send: "送信",
+                    dashboard: "ダッシュボード",
+                    dashDesc: "設定済みの項目のみ表示します",
+                    lapTimes: "ラップタイム",
+                    currentLap: "現在ラップ",
+                    totalTime: "合計時間",
+                    noLaps: "記録はありません",
+                    lapsUnit: "周",
+                    txRxLog: "送受信ログ",
+                    spdDisp: "スピード",
+                },
+            };
 
-        <!-- Right Column: Laps & Logs (Span 3) -->
-        <div id="right-column" class="md:col-span-3 flex flex-col h-full overflow-hidden relative">
-            
-            <!-- Lap Times (Initial height 3/5 = 60%) -->
-            <div id="lap-panel" class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-pink-500 flex flex-col bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 shrink-0" style="flex-basis: calc(60% - 10px); min-height: 25%;">
-                <div class="flex justify-between items-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-2 shrink-0">
-                    <h2 class="text-sm md:text-lg text-slate-600 dark:text-slate-400"><i class="fa-solid fa-stopwatch mr-2"></i><span data-i18n="lapTimes">LAP TIMES</span></h2>
-                    <span id="lap-count" class="bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300 px-2 py-0.5 rounded text-xs shrink-0 font-bold border border-pink-200 dark:border-pink-800">0 <span data-i18n="lapsUnit">LAPS</span></span>
-                </div>
-                
-                <!-- Live Timer Display -->
-                <div class="bg-slate-100 dark:bg-slate-900 rounded-lg p-2 2xl:p-3 mb-4 border border-slate-300 dark:border-slate-700 flex flex-col 2xl:flex-row justify-between items-center shadow-inner gap-2 2xl:gap-0 shrink-0">
-                    <div class="w-full 2xl:flex-1 text-center 2xl:border-r 2xl:border-slate-300 dark:2xl:border-slate-700 pb-2 2xl:pb-0 border-b 2xl:border-b-0 border-slate-300 dark:border-slate-700 min-w-0">
-                        <div class="text-[10px] text-slate-500 mb-1 tracking-wider" data-i18n="currentLap">CURRENT LAP</div>
-                        <div id="live-lap-time" class="text-xl xl:text-2xl text-pink-500 dark:text-pink-400 font-mono tabular-nums truncate">00:00.000</div>
-                    </div>
-                    <div class="w-full 2xl:flex-1 text-center pt-1 2xl:pt-0 min-w-0">
-                        <div class="text-[10px] text-slate-500 mb-1 tracking-wider" data-i18n="totalTime">TOTAL TIME</div>
-                        <div id="live-total-time" class="text-xl xl:text-2xl text-cyan-600 dark:text-cyan-400 font-mono tabular-nums truncate">00:00.000</div>
-                    </div>
-                </div>
+            // ブラウザの言語を取得し、日本語以外なら英語をデフォルトにする
+            let currentLang = (
+                navigator.language || navigator.userLanguage
+            ).startsWith("ja")
+                ? "ja"
+                : "en";
 
-                <div id="lap-list" class="flex-1 overflow-y-auto log-container space-y-2 pr-2">
-                    <!-- Lap items will appear here -->
-                    <div class="text-sm text-slate-500 text-center mt-4" id="lap-empty-msg" data-i18n="noLaps">No laps recorded</div>
-                </div>
-            </div>
-
-            <!-- Resizer -->
-            <div id="resizer" class="h-4 flex-none cursor-row-resize flex items-center justify-center group z-10 touch-none py-2 my-1">
-                <div class="w-16 h-1 bg-slate-300 dark:bg-slate-600 rounded-full group-hover:bg-cyan-500 dark:group-hover:bg-cyan-400 transition-colors shadow-sm"></div>
-            </div>
-
-            <!-- Serial Log (Takes remaining space) -->
-            <div id="log-panel" class="glass-panel p-4 md:p-5 rounded-xl border-t-4 border-t-slate-500 flex flex-col bg-white/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 flex-1 min-h-[20%]">
-                <div class="flex justify-between items-center mb-2 border-b border-slate-300 dark:border-slate-700 pb-2 shrink-0">
-                    <h2 class="text-sm text-slate-600 dark:text-slate-400"><i class="fa-solid fa-list mr-2"></i><span data-i18n="txRxLog">TX/RX LOG</span></h2>
-                    <button onclick="app.clearLog()" class="text-xs text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <div id="serial-log" class="flex-1 overflow-y-auto log-container text-xs font-mono pr-2 space-y-1">
-                    <!-- Logs appear here -->
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <!-- Template for Dynamic Dashboard Card -->
-    <template id="card-template">
-        <div class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 border border-slate-300 dark:border-slate-700 flex flex-col relative overflow-hidden group min-w-0 shadow-sm">
-            <div class="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none text-slate-800 dark:text-white">
-                <i class="fa-solid fa-microchip text-4xl"></i>
-            </div>
-            <div class="flex justify-between items-start mb-1">
-                <span class="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest data-name truncate flex-1 font-bold">NAME</span>
-                <button class="text-slate-400 hover:text-red-500 text-[10px] btn-remove-card hidden"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <span class="text-[10px] text-slate-400 dark:text-slate-500 data-key font-mono mb-2">key: ---</span>
-            
-            <div class="flex items-end gap-2 w-full min-w-0 mt-auto">
-                <span class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white data-value font-title truncate block w-full">---</span>
-            </div>
-        </div>
-    </template>
-
-    <script>
-        // --- i18n Data ---
-        const translations = {
-            en: {
-                title: "TELEMETRY",
-                connect: "CONNECT",
-                disconnect: "DISCONNECT",
-                disconnected: "DISCONNECTED",
-                connected: "CONNECTED",
-                engineCtrl: "ENGINE CONTROL",
-                start: "START",
-                stop: "STOP",
-                dashConfig: "DASHBOARD CONFIG",
-                addDashItem: "ADD ITEM",
-                customCmd: "CUSTOM CMD",
-                reqStatus: "REQ STATUS",
-                key: "KEY",
-                value: "VALUE",
-                dispName: "DISPLAY NAME",
-                send: "SEND",
-                dashboard: "DASHBOARD",
-                dashDesc: "Shows configured items only",
-                lapTimes: "LAP TIMES",
-                currentLap: "CURRENT LAP",
-                totalTime: "TOTAL TIME",
-                noLaps: "No laps recorded",
-                lapsUnit: "LAPS",
-                txRxLog: "TX/RX LOG",
-                spdDisp: "Speed"
-            },
-            ja: {
-                title: "テレメトリー",
-                connect: "接続",
-                disconnect: "切断",
-                disconnected: "未接続",
-                connected: "接続済み",
-                engineCtrl: "エンジン制御",
-                start: "スタート",
-                stop: "ストップ",
-                dashConfig: "ダッシュボード設定",
-                addDashItem: "追加",
-                customCmd: "カスタム送信",
-                reqStatus: "状態要求",
-                key: "キー",
-                value: "値",
-                dispName: "表示名",
-                send: "送信",
-                dashboard: "ダッシュボード",
-                dashDesc: "設定済みの項目のみ表示します",
-                lapTimes: "ラップタイム",
-                currentLap: "現在ラップ",
-                totalTime: "合計時間",
-                noLaps: "記録はありません",
-                lapsUnit: "周",
-                txRxLog: "送受信ログ",
-                spdDisp: "スピード"
-            }
-        };
-
-        // ブラウザの言語を取得し、日本語以外なら英語をデフォルトにする
-        let currentLang = (navigator.language || navigator.userLanguage).startsWith('ja') ? 'ja' : 'en';
-
-        function initLangUI() {
-            // 切り替えボタンの初期テキストを設定（現在の言語が英語なら「JA」ボタンを表示）
-            document.getElementById('btn-lang').textContent = currentLang === 'en' ? 'JA' : 'EN';
-            // htmlタグのlang属性も更新
-            document.documentElement.lang = currentLang;
-        }
-
-        function toggleLang() {
-            currentLang = currentLang === 'en' ? 'ja' : 'en';
-            initLangUI();
-            applyTranslations();
-            if (window.app) window.app.renderDashboard(); // Re-render to update default item names
-        }
-
-        function applyTranslations() {
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (translations[currentLang][key]) {
-                    el.textContent = translations[currentLang][key];
-                }
-            });
-            // Update app specific UI if needed
-            if (window.app && window.app.connected) {
-                document.getElementById('connection-status').textContent = translations[currentLang]['connected'];
-                document.getElementById('btn-connect').innerHTML = `<i class="fa-solid fa-xmark mr-1 md:mr-2"></i>${translations[currentLang]['disconnect']}`;
-            } else if(window.app) {
-                document.getElementById('connection-status').textContent = translations[currentLang]['disconnected'];
-                document.getElementById('btn-connect').innerHTML = `<i class="fa-solid fa-plug mr-1 md:mr-2"></i>${translations[currentLang]['connect']}`;
-            }
-            if(window.app){
-                window.app.lapCount.innerHTML = `${window.app.laps.length} <span data-i18n="lapsUnit">${translations[currentLang]['lapsUnit']}</span>`;
-            }
-        }
-
-        // --- Theme Management ---
-        function toggleTheme() {
-            const html = document.documentElement;
-            html.classList.toggle('dark');
-            const isDark = html.classList.contains('dark');
-            const icon = document.querySelector('#btn-theme i');
-            
-            if (isDark) {
-                icon.className = 'fa-solid fa-moon';
-                icon.parentElement.classList.remove('text-orange-500');
-            } else {
-                icon.className = 'fa-solid fa-sun';
-                icon.parentElement.classList.add('text-orange-500');
-            }
-        }
-
-        // --- Application Logic ---
-        class TelemetryApp {
-            constructor() {
-                this.port = null;
-                this.reader = null;
-                this.writer = null;
-                this.readableStreamClosed = null;
-                this.writableStreamClosed = null;
-                this.connected = false;
-                this.readBuffer = '';
-                
-                // Dashboard Configuration
-                // Default item: speed
-                this.dashItems = [
-                    { key: 'spd', i18nKey: 'spdDisp', customName: '', value: '---' }
-                ];
-                
-                // State
-                this.laps = [];
-                this.sessionStartTime = null;
-                this.lastLapTime = null;
-                this.isTimerRunning = false;
-
-                // UI Elements
-                this.btnConnect = document.getElementById('btn-connect');
-                this.led = document.getElementById('connection-led');
-                this.statusText = document.getElementById('connection-status');
-                this.logContainer = document.getElementById('serial-log');
-                this.dashboardGrid = document.getElementById('dashboard-grid');
-                this.lapList = document.getElementById('lap-list');
-                this.lapCount = document.getElementById('lap-count');
-                this.liveLapTime = document.getElementById('live-lap-time');
-                this.liveTotalTime = document.getElementById('live-total-time');
-
-                // Bind Events
-                this.btnConnect.addEventListener('click', () => this.toggleConnection());
-
-                // Initial Render & Setup
-                this.renderDashboard();
-                this.initResizer();
+            function initLangUI() {
+                // 切り替えボタンの初期テキストを設定（現在の言語が英語なら「JA」ボタンを表示）
+                document.getElementById("btn-lang").textContent =
+                    currentLang === "en" ? "JA" : "EN";
+                // htmlタグのlang属性も更新
+                document.documentElement.lang = currentLang;
             }
 
-            // --- Panel Resizer Method ---
-            initResizer() {
-                const resizer = document.getElementById('resizer');
-                const lapPanel = document.getElementById('lap-panel');
-                const rightColumn = document.getElementById('right-column');
-                
-                let isResizing = false;
+            function toggleLang() {
+                currentLang = currentLang === "en" ? "ja" : "en";
+                initLangUI();
+                applyTranslations();
+                if (window.app) window.app.renderDashboard(); // Re-render to update default item names
+            }
 
-                const startResize = (e) => {
-                    isResizing = true;
-                    document.body.style.cursor = 'row-resize';
-                    document.body.style.userSelect = 'none';
-                    // Prevent scrolling on touch devices
-                    if (e.type === 'touchstart') e.preventDefault();
-                };
-
-                const resize = (e) => {
-                    if (!isResizing) return;
-                    
-                    // Get Y coordinate for both mouse and touch events
-                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                    
-                    const containerRect = rightColumn.getBoundingClientRect();
-                    // Calculate percentage based on column height
-                    let newFlexBasis = ((clientY - containerRect.top) / containerRect.height) * 100;
-                    
-                    // Constraints (min 20%, max 80%)
-                    if (newFlexBasis < 20) newFlexBasis = 20;
-                    if (newFlexBasis > 80) newFlexBasis = 80;
-                    
-                    lapPanel.style.flexBasis = `calc(${newFlexBasis}% - 10px)`;
-                };
-
-                const stopResize = () => {
-                    if (isResizing) {
-                        isResizing = false;
-                        document.body.style.cursor = '';
-                        document.body.style.userSelect = '';
+            function applyTranslations() {
+                document.querySelectorAll("[data-i18n]").forEach((el) => {
+                    const key = el.getAttribute("data-i18n");
+                    if (translations[currentLang][key]) {
+                        el.textContent = translations[currentLang][key];
                     }
-                };
-
-                resizer.addEventListener('mousedown', startResize);
-                resizer.addEventListener('touchstart', startResize, { passive: false });
-
-                window.addEventListener('mousemove', resize);
-                window.addEventListener('touchmove', resize, { passive: false });
-
-                window.addEventListener('mouseup', stopResize);
-                window.addEventListener('touchend', stopResize);
-            }
-
-            // --- Dashboard Config Methods ---
-            addDashboardItem() {
-                const keyInput = document.getElementById('cfg-key');
-                const nameInput = document.getElementById('cfg-name');
-                const key = keyInput.value.trim().toLowerCase();
-                const name = nameInput.value.trim();
-
-                if (!key) {
-                    alert('Please enter a KEY.');
-                    return;
-                }
-
-                // Check if already exists
-                if (this.dashItems.find(item => item.key === key)) {
-                    alert(`Key '${key}' is already in the dashboard.`);
-                    return;
-                }
-
-                this.dashItems.push({
-                    key: key,
-                    customName: name || key.toUpperCase(), // Fallback to key if name is empty
-                    value: '---'
                 });
-
-                // Clear inputs
-                keyInput.value = '';
-                nameInput.value = '';
-
-                this.renderDashboard();
-                this.log('System', `Added meter for [${key}]`, 'info');
-            }
-
-            removeDashboardItem(key) {
-                this.dashItems = this.dashItems.filter(item => item.key !== key);
-                this.renderDashboard();
-            }
-
-            renderDashboard() {
-                this.dashboardGrid.innerHTML = '';
-                const template = document.getElementById('card-template');
-
-                if (this.dashItems.length === 0) {
-                    this.dashboardGrid.innerHTML = `<div class="col-span-2 text-center text-slate-400 py-10">No meters configured.</div>`;
-                    return;
+                // Update app specific UI if needed
+                if (window.app && window.app.connected) {
+                    document.getElementById("connection-status").textContent =
+                        translations[currentLang]["connected"];
+                    document.getElementById("btn-connect").innerHTML =
+                        `<i class="fa-solid fa-xmark mr-1 md:mr-2"></i>${translations[currentLang]["disconnect"]}`;
+                } else if (window.app) {
+                    document.getElementById("connection-status").textContent =
+                        translations[currentLang]["disconnected"];
+                    document.getElementById("btn-connect").innerHTML =
+                        `<i class="fa-solid fa-plug mr-1 md:mr-2"></i>${translations[currentLang]["connect"]}`;
                 }
-
-                this.dashItems.forEach(item => {
-                    const clone = template.content.cloneNode(true);
-                    const cardDiv = clone.querySelector('div');
-                    cardDiv.id = `card-${item.key}`;
-                    
-                    const nameSpan = clone.querySelector('.data-name');
-                    // Use i18n dict if available, else custom name
-                    nameSpan.textContent = item.i18nKey ? translations[currentLang][item.i18nKey] : item.customName;
-                    
-                    const keySpan = clone.querySelector('.data-key');
-                    keySpan.textContent = `key: ${item.key}`;
-
-                    const valueSpan = clone.querySelector('.data-value');
-                    valueSpan.textContent = item.value;
-
-                    // Setup remove button
-                    const btnRemove = clone.querySelector('.btn-remove-card');
-                    btnRemove.classList.remove('hidden');
-                    btnRemove.onclick = () => this.removeDashboardItem(item.key);
-
-                    this.dashboardGrid.appendChild(clone);
-                });
+                if (window.app) {
+                    window.app.lapCount.innerHTML = `${window.app.laps.length} <span data-i18n="lapsUnit">${translations[currentLang]["lapsUnit"]}</span>`;
+                }
             }
 
-            // --- Connection Methods ---
-            async toggleConnection() {
-                if (this.connected) {
-                    await this.disconnect();
+            // --- Theme Management ---
+            function toggleTheme() {
+                const html = document.documentElement;
+                html.classList.toggle("dark");
+                const isDark = html.classList.contains("dark");
+                const icon = document.querySelector("#btn-theme i");
+
+                if (isDark) {
+                    icon.className = "fa-solid fa-moon";
+                    icon.parentElement.classList.remove("text-orange-500");
                 } else {
-                    await this.connect();
+                    icon.className = "fa-solid fa-sun";
+                    icon.parentElement.classList.add("text-orange-500");
                 }
             }
 
-            async connect() {
-                try {
-                    if (!('serial' in navigator)) {
-                        alert('Web Serial API is not supported in this browser. Please use Chrome or Edge.');
+            // --- Application Logic ---
+            class TelemetryApp {
+                constructor() {
+                    this.port = null;
+                    this.reader = null;
+                    this.writer = null;
+                    this.readableStreamClosed = null;
+                    this.writableStreamClosed = null;
+                    this.connected = false;
+                    this.readBuffer = "";
+
+                    // Dashboard Configuration
+                    // Default item: speed
+                    this.dashItems = [
+                        {
+                            key: "spd",
+                            i18nKey: "spdDisp",
+                            customName: "",
+                            value: "---",
+                        },
+                    ];
+
+                    // State
+                    this.laps = [];
+                    this.sessionStartTime = null;
+                    this.lastLapTime = null;
+                    this.isTimerRunning = false;
+
+                    // UI Elements
+                    this.btnConnect = document.getElementById("btn-connect");
+                    this.led = document.getElementById("connection-led");
+                    this.statusText =
+                        document.getElementById("connection-status");
+                    this.logContainer = document.getElementById("serial-log");
+                    this.dashboardGrid =
+                        document.getElementById("dashboard-grid");
+                    this.lapList = document.getElementById("lap-list");
+                    this.lapCount = document.getElementById("lap-count");
+                    this.liveLapTime = document.getElementById("live-lap-time");
+                    this.liveTotalTime =
+                        document.getElementById("live-total-time");
+
+                    // Bind Events
+                    this.btnConnect.addEventListener("click", () =>
+                        this.toggleConnection(),
+                    );
+
+                    // Initial Render & Setup
+                    this.renderDashboard();
+                    this.initResizer();
+                }
+
+                // --- Panel Resizer Method ---
+                initResizer() {
+                    const resizer = document.getElementById("resizer");
+                    const lapPanel = document.getElementById("lap-panel");
+                    const rightColumn = document.getElementById("right-column");
+
+                    let isResizing = false;
+
+                    const startResize = (e) => {
+                        isResizing = true;
+                        document.body.style.cursor = "row-resize";
+                        document.body.style.userSelect = "none";
+                        // Prevent scrolling on touch devices
+                        if (e.type === "touchstart") e.preventDefault();
+                    };
+
+                    const resize = (e) => {
+                        if (!isResizing) return;
+
+                        // Get Y coordinate for both mouse and touch events
+                        const clientY = e.touches
+                            ? e.touches[0].clientY
+                            : e.clientY;
+
+                        const containerRect =
+                            rightColumn.getBoundingClientRect();
+                        // Calculate percentage based on column height
+                        let newFlexBasis =
+                            ((clientY - containerRect.top) /
+                                containerRect.height) *
+                            100;
+
+                        // Constraints (min 20%, max 80%)
+                        if (newFlexBasis < 20) newFlexBasis = 20;
+                        if (newFlexBasis > 80) newFlexBasis = 80;
+
+                        lapPanel.style.flexBasis = `calc(${newFlexBasis}% - 10px)`;
+                    };
+
+                    const stopResize = () => {
+                        if (isResizing) {
+                            isResizing = false;
+                            document.body.style.cursor = "";
+                            document.body.style.userSelect = "";
+                        }
+                    };
+
+                    resizer.addEventListener("mousedown", startResize);
+                    resizer.addEventListener("touchstart", startResize, {
+                        passive: false,
+                    });
+
+                    window.addEventListener("mousemove", resize);
+                    window.addEventListener("touchmove", resize, {
+                        passive: false,
+                    });
+
+                    window.addEventListener("mouseup", stopResize);
+                    window.addEventListener("touchend", stopResize);
+                }
+
+                // --- Dashboard Config Methods ---
+                addDashboardItem() {
+                    const keyInput = document.getElementById("cfg-key");
+                    const nameInput = document.getElementById("cfg-name");
+                    const key = keyInput.value.trim().toLowerCase();
+                    const name = nameInput.value.trim();
+
+                    if (!key) {
+                        alert("Please enter a KEY.");
                         return;
                     }
 
-                    this.port = await navigator.serial.requestPort();
-                    await this.port.open({ baudRate: 115200 });
-
-                    const textEncoder = new TextEncoderStream();
-                    this.writableStreamClosed = textEncoder.readable.pipeTo(this.port.writable);
-                    this.writer = textEncoder.writable.getWriter();
-
-                    this.connected = true;
-                    applyTranslations(); // Updates button text to DISCONNECT based on language
-                    
-                    this.btnConnect.classList.replace('bg-cyan-600', 'bg-red-600');
-                    this.btnConnect.classList.replace('hover:bg-cyan-500', 'hover:bg-red-500');
-                    this.btnConnect.classList.replace('border-cyan-500', 'border-red-500');
-                    this.btnConnect.classList.remove('dark:border-cyan-400');
-                    this.btnConnect.classList.add('dark:border-red-400');
-                    
-                    this.led.classList.add('active');
-                    this.statusText.classList.remove('text-slate-500', 'dark:text-slate-400');
-                    this.statusText.classList.add('text-green-600', 'dark:text-green-400');
-                    
-                    this.log('System', 'Connected to micro:bit', 'info');
-                    this.readLoop();
-
-                } catch (err) {
-                    console.error('Connection error:', err);
-                    this.log('System', `Connection failed: ${err.message}`, 'error');
-                }
-            }
-
-            async disconnect() {
-                try {
-                    if (this.reader) {
-                        await this.reader.cancel();
-                        await this.readableStreamClosed.catch(() => {});
+                    // Check if already exists
+                    if (this.dashItems.find((item) => item.key === key)) {
+                        alert(`Key '${key}' is already in the dashboard.`);
+                        return;
                     }
-                    if (this.writer) {
-                        await this.writer.close();
-                        await this.writableStreamClosed.catch(() => {});
-                    }
-                    if (this.port) {
-                        await this.port.close();
-                    }
-                } catch (e) {
-                    console.error('Disconnect error:', e);
+
+                    this.dashItems.push({
+                        key: key,
+                        customName: name || key.toUpperCase(), // Fallback to key if name is empty
+                        value: "---",
+                    });
+
+                    // Clear inputs
+                    keyInput.value = "";
+                    nameInput.value = "";
+
+                    this.renderDashboard();
+                    this.log("System", `Added meter for [${key}]`, "info");
                 }
 
-                this.connected = false;
-                this.isTimerRunning = false; // 切断時にタイマーを停止
-                this.port = null;
-                this.reader = null;
-                this.writer = null;
-                this.readableStreamClosed = null;
-                this.writableStreamClosed = null;
+                removeDashboardItem(key) {
+                    this.dashItems = this.dashItems.filter(
+                        (item) => item.key !== key,
+                    );
+                    this.renderDashboard();
+                }
 
-                applyTranslations(); // Updates button text to CONNECT
+                renderDashboard() {
+                    this.dashboardGrid.innerHTML = "";
+                    const template = document.getElementById("card-template");
 
-                this.btnConnect.classList.replace('bg-red-600', 'bg-cyan-600');
-                this.btnConnect.classList.replace('hover:bg-red-500', 'hover:bg-cyan-500');
-                this.btnConnect.classList.replace('border-red-500', 'border-cyan-500');
-                this.btnConnect.classList.remove('dark:border-red-400');
-                this.btnConnect.classList.add('dark:border-cyan-400');
-
-                this.led.classList.remove('active');
-                this.statusText.classList.remove('text-green-600', 'dark:text-green-400');
-                this.statusText.classList.add('text-slate-500', 'dark:text-slate-400');
-                
-                this.log('System', 'Disconnected', 'info');
-            }
-
-            // --- Data Handling ---
-            async readLoop() {
-                const textDecoder = new TextDecoderStream();
-                this.readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
-                this.reader = textDecoder.readable.getReader();
-
-                try {
-                    while (true) {
-                        const { value, done } = await this.reader.read();
-                        if (done) break;
-                        if (value) {
-                            this.readBuffer += value;
-                            this.processBuffer();
-                        }
+                    if (this.dashItems.length === 0) {
+                        this.dashboardGrid.innerHTML = `<div class="col-span-2 text-center text-slate-400 py-10">No meters configured.</div>`;
+                        return;
                     }
-                } catch (error) {
-                    console.error('Read error:', error);
-                    this.log('System', 'Read error. Disconnecting...', 'error');
+
+                    this.dashItems.forEach((item) => {
+                        const clone = template.content.cloneNode(true);
+                        const cardDiv = clone.querySelector("div");
+                        cardDiv.id = `card-${item.key}`;
+
+                        const nameSpan = clone.querySelector(".data-name");
+                        // Use i18n dict if available, else custom name
+                        nameSpan.textContent = item.i18nKey
+                            ? translations[currentLang][item.i18nKey]
+                            : item.customName;
+
+                        const keySpan = clone.querySelector(".data-key");
+                        keySpan.textContent = `key: ${item.key}`;
+
+                        const valueSpan = clone.querySelector(".data-value");
+                        valueSpan.textContent = item.value;
+
+                        // Setup remove button
+                        const btnRemove =
+                            clone.querySelector(".btn-remove-card");
+                        btnRemove.classList.remove("hidden");
+                        btnRemove.onclick = () =>
+                            this.removeDashboardItem(item.key);
+
+                        this.dashboardGrid.appendChild(clone);
+                    });
+                }
+
+                // --- Connection Methods ---
+                async toggleConnection() {
                     if (this.connected) {
                         await this.disconnect();
-                    }
-                } finally {
-                    if (this.reader) this.reader.releaseLock();
-                }
-            }
-
-            processBuffer() {
-                let lines = this.readBuffer.split(/\r?\n/);
-                this.readBuffer = lines.pop();
-
-                for (let line of lines) {
-                    line = line.trim();
-                    if (line) {
-                        this.log('RX', line, 'rx');
-                        this.parseData(line);
-                    }
-                }
-            }
-
-            parseData(line) {
-                const match = line.match(/^([^:=]+)[:=](.+)$/);
-                if (match) {
-                    const key = match[1].trim().toLowerCase();
-                    const value = match[2].trim();
-                    
-                    if (key === 'lap') {
-                        this.recordLap(value);
                     } else {
-                        this.updateDashboardValue(key, value);
+                        await this.connect();
                     }
                 }
-            }
 
-            updateDashboardValue(key, value) {
-                // Check if key is configured
-                const itemIndex = this.dashItems.findIndex(i => i.key === key);
-                
-                if (itemIndex !== -1) {
-                    // Update internal state
-                    this.dashItems[itemIndex].value = value;
+                async connect() {
+                    try {
+                        if (!("serial" in navigator)) {
+                            alert(
+                                "Web Serial API is not supported in this browser. Please use Chrome or Edge.",
+                            );
+                            return;
+                        }
 
-                    // Update DOM directly for performance (instead of full re-render)
-                    const card = document.getElementById(`card-${key}`);
-                    if (card) {
-                        const valueSpan = card.querySelector('.data-value');
-                        valueSpan.textContent = value;
-                        
-                        // Animation
-                        valueSpan.classList.remove('value-flash');
-                        void valueSpan.offsetWidth; 
-                        valueSpan.classList.add('value-flash');
+                        this.port = await navigator.serial.requestPort();
+                        await this.port.open({ baudRate: 115200 });
+
+                        const textEncoder = new TextEncoderStream();
+                        this.writableStreamClosed = textEncoder.readable.pipeTo(
+                            this.port.writable,
+                        );
+                        this.writer = textEncoder.writable.getWriter();
+
+                        this.connected = true;
+                        applyTranslations(); // Updates button text to DISCONNECT based on language
+
+                        this.btnConnect.classList.replace(
+                            "bg-cyan-600",
+                            "bg-red-600",
+                        );
+                        this.btnConnect.classList.replace(
+                            "hover:bg-cyan-500",
+                            "hover:bg-red-500",
+                        );
+                        this.btnConnect.classList.replace(
+                            "border-cyan-500",
+                            "border-red-500",
+                        );
+                        this.btnConnect.classList.remove(
+                            "dark:border-cyan-400",
+                        );
+                        this.btnConnect.classList.add("dark:border-red-400");
+
+                        this.led.classList.add("active");
+                        this.statusText.classList.remove(
+                            "text-slate-500",
+                            "dark:text-slate-400",
+                        );
+                        this.statusText.classList.add(
+                            "text-green-600",
+                            "dark:text-green-400",
+                        );
+
+                        this.log("System", "Connected to micro:bit", "info");
+                        this.readLoop();
+                    } catch (err) {
+                        console.error("Connection error:", err);
+                        this.log(
+                            "System",
+                            `Connection failed: ${err.message}`,
+                            "error",
+                        );
                     }
                 }
-            }
 
-            // --- Lap & Timer Logic ---
-            formatTime(ms) {
-                const date = new Date(ms);
-                const m = String(date.getUTCMinutes()).padStart(2, '0');
-                const s = String(date.getUTCSeconds()).padStart(2, '0');
-                const msStr = String(date.getUTCMilliseconds()).padStart(3, '0');
-                const h = Math.floor(ms / 3600000);
-                return h > 0 ? `${h}:${m}:${s}.${msStr}` : `${m}:${s}.${msStr}`;
-            }
+                async disconnect() {
+                    try {
+                        if (this.reader) {
+                            await this.reader.cancel();
+                            await this.readableStreamClosed.catch(() => {});
+                        }
+                        if (this.writer) {
+                            await this.writer.close();
+                            await this.writableStreamClosed.catch(() => {});
+                        }
+                        if (this.port) {
+                            await this.port.close();
+                        }
+                    } catch (e) {
+                        console.error("Disconnect error:", e);
+                    }
 
-            updateLiveTimer = () => {
-                if (!this.isTimerRunning) return;
+                    this.connected = false;
+                    this.isTimerRunning = false; // 切断時にタイマーを停止
+                    this.port = null;
+                    this.reader = null;
+                    this.writer = null;
+                    this.readableStreamClosed = null;
+                    this.writableStreamClosed = null;
 
-                const now = Date.now();
-                const totalTimeMs = now - this.sessionStartTime;
-                const lapTimeMs = now - this.lastLapTime;
-                
-                this.liveTotalTime.textContent = this.formatTime(totalTimeMs);
-                this.liveLapTime.textContent = this.formatTime(lapTimeMs);
-                
-                requestAnimationFrame(this.updateLiveTimer);
-            }
+                    applyTranslations(); // Updates button text to CONNECT
 
-            recordLap(value) {
-                if (!this.sessionStartTime) {
-                    this.log('System', 'Engine not started. Using current time as start.', 'warn');
-                    this.sessionStartTime = Date.now();
-                    this.lastLapTime = this.sessionStartTime;
+                    this.btnConnect.classList.replace(
+                        "bg-red-600",
+                        "bg-cyan-600",
+                    );
+                    this.btnConnect.classList.replace(
+                        "hover:bg-red-500",
+                        "hover:bg-cyan-500",
+                    );
+                    this.btnConnect.classList.replace(
+                        "border-red-500",
+                        "border-cyan-500",
+                    );
+                    this.btnConnect.classList.remove("dark:border-red-400");
+                    this.btnConnect.classList.add("dark:border-cyan-400");
+
+                    this.led.classList.remove("active");
+                    this.statusText.classList.remove(
+                        "text-green-600",
+                        "dark:text-green-400",
+                    );
+                    this.statusText.classList.add(
+                        "text-slate-500",
+                        "dark:text-slate-400",
+                    );
+
+                    this.log("System", "Disconnected", "info");
                 }
 
-                const now = Date.now();
-                const lapTimeMs = now - this.lastLapTime;
-                const totalTimeMs = now - this.sessionStartTime;
-                this.lastLapTime = now;
+                // --- Data Handling ---
+                async readLoop() {
+                    const textDecoder = new TextDecoderStream();
+                    this.readableStreamClosed = this.port.readable.pipeTo(
+                        textDecoder.writable,
+                    );
+                    this.reader = textDecoder.readable.getReader();
 
-                if (this.laps.length === 0) {
-                    this.lapList.innerHTML = ''; // Clear empty message
+                    try {
+                        while (true) {
+                            const { value, done } = await this.reader.read();
+                            if (done) break;
+                            if (value) {
+                                this.readBuffer += value;
+                                this.processBuffer();
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Read error:", error);
+                        this.log(
+                            "System",
+                            "Read error. Disconnecting...",
+                            "error",
+                        );
+                        if (this.connected) {
+                            await this.disconnect();
+                        }
+                    } finally {
+                        if (this.reader) this.reader.releaseLock();
+                    }
                 }
 
-                const lapNumber = this.laps.length + 1;
-                const lapTimeStr = this.formatTime(lapTimeMs);
-                const totalTimeStr = this.formatTime(totalTimeMs);
-                
-                this.laps.push({ number: lapNumber, value: value, lapTime: lapTimeStr, totalTime: totalTimeStr });
-                this.lapCount.innerHTML = `${this.laps.length} <span data-i18n="lapsUnit">${translations[currentLang]['lapsUnit']}</span>`;
+                processBuffer() {
+                    let lines = this.readBuffer.split(/\r?\n/);
+                    this.readBuffer = lines.pop();
 
-                const lapEl = document.createElement('div');
-                lapEl.className = 'flex flex-col bg-slate-50 dark:bg-slate-800 p-2 rounded text-sm border-l-2 border-pink-500 mb-2 min-w-0 border border-slate-200 dark:border-transparent';
-                lapEl.innerHTML = `
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-slate-900 dark:text-white font-bold shrink-0 text-base">L${lapNumber.toString().padStart(2, '0')}</span>
-                        <span class="text-slate-500 dark:text-slate-400 flex-1 mx-2 text-right truncate text-xs" title="${value}">val: ${value}</span>
-                    </div>
-                    <div class="flex flex-col xl:flex-row xl:justify-between text-xs font-mono gap-1 xl:gap-0">
-                        <span class="text-slate-500 truncate">LAP: <span class="text-pink-600 dark:text-pink-400">${lapTimeStr}</span></span>
-                        <span class="text-slate-500 truncate">TOT: <span class="text-cyan-600 dark:text-cyan-400">${totalTimeStr}</span></span>
-                    </div>
-                `;
-                
-                this.lapList.prepend(lapEl);
-            }
-
-            // --- Command Sending ---
-            async sendCommand(key, value) {
-                if (!this.connected || !this.writer) {
-                    this.log('System', 'Not connected', 'error');
-                    alert('Please connect to device first.');
-                    return;
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line) {
+                            this.log("RX", line, "rx");
+                            this.parseData(line);
+                        }
+                    }
                 }
 
-                if (key === 'eng') {
-                    if (value === '1') {
+                parseData(line) {
+                    const match = line.match(/^([^:=]+)[:=](.+)$/);
+                    if (match) {
+                        const key = match[1].trim().toLowerCase();
+                        const value = match[2].trim();
+
+                        if (key === "lap") {
+                            this.recordLap(value);
+                        } else {
+                            this.updateDashboardValue(key, value);
+                        }
+                    }
+                }
+
+                updateDashboardValue(key, value) {
+                    // Check if key is configured
+                    const itemIndex = this.dashItems.findIndex(
+                        (i) => i.key === key,
+                    );
+
+                    if (itemIndex !== -1) {
+                        // Update internal state
+                        this.dashItems[itemIndex].value = value;
+
+                        // Update DOM directly for performance (instead of full re-render)
+                        const card = document.getElementById(`card-${key}`);
+                        if (card) {
+                            const valueSpan = card.querySelector(".data-value");
+                            valueSpan.textContent = value;
+
+                            // Animation
+                            valueSpan.classList.remove("value-flash");
+                            void valueSpan.offsetWidth;
+                            valueSpan.classList.add("value-flash");
+                        }
+                    }
+                }
+
+                // --- Lap & Timer Logic ---
+                formatTime(ms) {
+                    const date = new Date(ms);
+                    const m = String(date.getUTCMinutes()).padStart(2, "0");
+                    const s = String(date.getUTCSeconds()).padStart(2, "0");
+                    const msStr = String(date.getUTCMilliseconds()).padStart(
+                        3,
+                        "0",
+                    );
+                    const h = Math.floor(ms / 3600000);
+                    return h > 0
+                        ? `${h}:${m}:${s}.${msStr}`
+                        : `${m}:${s}.${msStr}`;
+                }
+
+                updateLiveTimer = () => {
+                    if (!this.isTimerRunning) return;
+
+                    const now = Date.now();
+                    const totalTimeMs = now - this.sessionStartTime;
+                    const lapTimeMs = now - this.lastLapTime;
+
+                    this.liveTotalTime.textContent =
+                        this.formatTime(totalTimeMs);
+                    this.liveLapTime.textContent = this.formatTime(lapTimeMs);
+
+                    requestAnimationFrame(this.updateLiveTimer);
+                };
+
+                recordLap(value) {
+                    if (!this.sessionStartTime) {
+                        this.log(
+                            "System",
+                            "Engine not started. Using current time as start.",
+                            "warn",
+                        );
                         this.sessionStartTime = Date.now();
                         this.lastLapTime = this.sessionStartTime;
-                        this.laps = [];
-                        this.lapList.innerHTML = `<div class="text-sm text-slate-500 text-center mt-4" id="lap-empty-msg" data-i18n="noLaps">${translations[currentLang]['noLaps']}</div>`;
-                        this.lapCount.innerHTML = `0 <span data-i18n="lapsUnit">${translations[currentLang]['lapsUnit']}</span>`;
-                        this.liveLapTime.textContent = '00:00.000';
-                        this.liveTotalTime.textContent = '00:00.000';
-                        this.isTimerRunning = true;
-                        requestAnimationFrame(this.updateLiveTimer);
-                        this.log('System', 'Telemetry session started', 'info');
-                    } else if (value === '0') {
-                        this.isTimerRunning = false;
-                        this.log('System', 'Telemetry session stopped', 'info');
+                    }
+
+                    const now = Date.now();
+                    const lapTimeMs = now - this.lastLapTime;
+                    const totalTimeMs = now - this.sessionStartTime;
+                    this.lastLapTime = now;
+
+                    if (this.laps.length === 0) {
+                        this.lapList.innerHTML = ""; // Clear empty message
+                    }
+
+                    const lapNumber = this.laps.length + 1;
+                    const lapTimeStr = this.formatTime(lapTimeMs);
+                    const totalTimeStr = this.formatTime(totalTimeMs);
+
+                    this.laps.push({
+                        number: lapNumber,
+                        value: value,
+                        lapTime: lapTimeStr,
+                        totalTime: totalTimeStr,
+                    });
+                    this.lapCount.innerHTML = `${this.laps.length} <span data-i18n="lapsUnit">${translations[currentLang]["lapsUnit"]}</span>`;
+
+                    const lapEl = document.createElement("div");
+                    lapEl.className =
+                        "flex flex-col bg-slate-50 dark:bg-slate-800 p-2 rounded text-sm border-l-2 border-pink-500 mb-2 min-w-0 border border-slate-200 dark:border-transparent";
+                    lapEl.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-slate-900 dark:text-white font-bold shrink-0 text-base">L${lapNumber.toString().padStart(2, "0")}</span>
+                        <span class="text-slate-500 dark:text-slate-400 flex-1 mx-2 text-right truncate text-xs" title="${value}">val: ${value}</span>
+                    </div>
+                    <div class="flex justify-between text-[11px] xl:text-xs font-mono">
+                        <span class="text-slate-500">LAP: <span class="text-pink-600 dark:text-pink-400">${lapTimeStr}</span></span>
+                        <span class="text-slate-500">TOT: <span class="text-cyan-600 dark:text-cyan-400">${totalTimeStr}</span></span>
+                    </div>
+                `;
+
+                    this.lapList.prepend(lapEl);
+                }
+
+                // --- Command Sending ---
+                async sendCommand(key, value) {
+                    if (!this.connected || !this.writer) {
+                        this.log("System", "Not connected", "error");
+                        alert("Please connect to device first.");
+                        return;
+                    }
+
+                    if (key === "eng") {
+                        if (value === "1") {
+                            this.sessionStartTime = Date.now();
+                            this.lastLapTime = this.sessionStartTime;
+                            this.laps = [];
+                            this.lapList.innerHTML = `<div class="text-sm text-slate-500 text-center mt-4" id="lap-empty-msg" data-i18n="noLaps">${translations[currentLang]["noLaps"]}</div>`;
+                            this.lapCount.innerHTML = `0 <span data-i18n="lapsUnit">${translations[currentLang]["lapsUnit"]}</span>`;
+                            this.liveLapTime.textContent = "00:00.000";
+                            this.liveTotalTime.textContent = "00:00.000";
+                            this.isTimerRunning = true;
+                            requestAnimationFrame(this.updateLiveTimer);
+                            this.log(
+                                "System",
+                                "Telemetry session started",
+                                "info",
+                            );
+                        } else if (value === "0") {
+                            this.isTimerRunning = false;
+                            this.log(
+                                "System",
+                                "Telemetry session stopped",
+                                "info",
+                            );
+                        }
+                    }
+
+                    const payload = `${key}:${value}\n`;
+                    try {
+                        await this.writer.write(payload);
+                        this.log("TX", payload.trim(), "tx");
+                    } catch (error) {
+                        console.error("Send error:", error);
+                        this.log("System", "Failed to send data", "error");
                     }
                 }
 
-                const payload = `${key}:${value}\n`;
-                try {
-                    await this.writer.write(payload);
-                    this.log('TX', payload.trim(), 'tx');
-                } catch (error) {
-                    console.error('Send error:', error);
-                    this.log('System', 'Failed to send data', 'error');
+                sendCustomCommand() {
+                    const key = document.getElementById("cmd-key").value.trim();
+                    const val = document.getElementById("cmd-val").value.trim();
+                    if (key) this.sendCommand(key, val);
+                }
+
+                // --- Logging ---
+                log(source, message, type = "info") {
+                    const entry = document.createElement("div");
+                    const time = new Date().toLocaleTimeString("en-US", {
+                        hour12: false,
+                        fractionalSecondDigits: 3,
+                    });
+
+                    let colorClass = "text-slate-500 dark:text-slate-400";
+                    let sourceIcon = "";
+
+                    switch (type) {
+                        case "tx":
+                            colorClass = "text-blue-600 dark:text-blue-400";
+                            sourceIcon =
+                                '<i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>';
+                            break;
+                        case "rx":
+                            colorClass = "text-green-600 dark:text-green-400";
+                            sourceIcon =
+                                '<i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center mr-1"></i>';
+                            break;
+                        case "error":
+                            colorClass = "text-red-600 dark:text-red-500";
+                            sourceIcon =
+                                '<i class="fa-solid fa-triangle-exclamation mr-1"></i>';
+                            break;
+                        case "warn":
+                            colorClass = "text-yellow-600 dark:text-yellow-500";
+                            break;
+                    }
+
+                    entry.innerHTML = `<span class="text-slate-400 dark:text-slate-600">[${time}]</span> <span class="${colorClass} font-bold w-12 inline-block">${sourceIcon}${source}</span> <span class="text-slate-700 dark:text-slate-300">${message}</span>`;
+
+                    this.logContainer.appendChild(entry);
+                    this.logContainer.scrollTop =
+                        this.logContainer.scrollHeight;
+                }
+
+                clearLog() {
+                    this.logContainer.innerHTML = "";
                 }
             }
 
-            sendCustomCommand() {
-                const key = document.getElementById('cmd-key').value.trim();
-                const val = document.getElementById('cmd-val').value.trim();
-                if (key) this.sendCommand(key, val);
-            }
+            // Initialize Application & Translations
+            initLangUI();
+            applyTranslations();
+            window.app = new TelemetryApp();
+            window.app.log("System", "Application initialized.", "info");
 
-            // --- Logging ---
-            log(source, message, type = 'info') {
-                const entry = document.createElement('div');
-                const time = new Date().toLocaleTimeString('en-US', { hour12: false, fractionalSecondDigits: 3 });
-                
-                let colorClass = 'text-slate-500 dark:text-slate-400';
-                let sourceIcon = '';
-
-                switch (type) {
-                    case 'tx': 
-                        colorClass = 'text-blue-600 dark:text-blue-400'; 
-                        sourceIcon = '<i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>';
-                        break;
-                    case 'rx': 
-                        colorClass = 'text-green-600 dark:text-green-400'; 
-                        sourceIcon = '<i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center mr-1"></i>';
-                        break;
-                    case 'error': 
-                        colorClass = 'text-red-600 dark:text-red-500'; 
-                        sourceIcon = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>';
-                        break;
-                    case 'warn':
-                        colorClass = 'text-yellow-600 dark:text-yellow-500';
-                        break;
-                }
-
-                entry.innerHTML = `<span class="text-slate-400 dark:text-slate-600">[${time}]</span> <span class="${colorClass} font-bold w-12 inline-block">${sourceIcon}${source}</span> <span class="text-slate-700 dark:text-slate-300">${message}</span>`;
-                
-                this.logContainer.appendChild(entry);
-                this.logContainer.scrollTop = this.logContainer.scrollHeight;
-            }
-
-            clearLog() {
-                this.logContainer.innerHTML = '';
-            }
-        }
-
-        // Initialize Application & Translations
-        initLangUI();
-        applyTranslations();
-        window.app = new TelemetryApp();
-        window.app.log('System', 'Application initialized.', 'info');
-
-        // Simulation mode for testing
-        window.simulateReceive = (key, val) => {
-            window.app.log('RX(Sim)', `${key}:${val}`, 'rx');
-            window.app.parseData(`${key}:${val}`);
-        };
-    </script>
-</body>
+            // Simulation mode for testing
+            window.simulateReceive = (key, val) => {
+                window.app.log("RX(Sim)", `${key}:${val}`, "rx");
+                window.app.parseData(`${key}:${val}`);
+            };
+        </script>
+    </body>
 </html>
