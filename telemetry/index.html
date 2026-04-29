@@ -199,11 +199,11 @@
                 <div class="bg-slate-100 dark:bg-slate-900 rounded-lg p-2 2xl:p-3 mb-4 border border-slate-300 dark:border-slate-700 flex flex-col 2xl:flex-row justify-between items-center shadow-inner gap-2 2xl:gap-0">
                     <div class="w-full 2xl:flex-1 text-center 2xl:border-r 2xl:border-slate-300 dark:2xl:border-slate-700 pb-2 2xl:pb-0 border-b 2xl:border-b-0 border-slate-300 dark:border-slate-700 min-w-0">
                         <div class="text-[10px] text-slate-500 mb-1 tracking-wider" data-i18n="currentLap">CURRENT LAP</div>
-                        <div id="live-lap-time" class="text-xl xl:text-2xl text-pink-500 dark:text-pink-400 font-mono font-title truncate">00:00.000</div>
+                        <div id="live-lap-time" class="text-xl xl:text-2xl text-pink-500 dark:text-pink-400 font-mono tabular-nums truncate">00:00.000</div>
                     </div>
                     <div class="w-full 2xl:flex-1 text-center pt-1 2xl:pt-0 min-w-0">
                         <div class="text-[10px] text-slate-500 mb-1 tracking-wider" data-i18n="totalTime">TOTAL TIME</div>
-                        <div id="live-total-time" class="text-xl xl:text-2xl text-cyan-600 dark:text-cyan-400 font-mono font-title truncate">00:00.000</div>
+                        <div id="live-total-time" class="text-xl xl:text-2xl text-cyan-600 dark:text-cyan-400 font-mono tabular-nums truncate">00:00.000</div>
                     </div>
                 </div>
 
@@ -355,6 +355,8 @@
                 this.port = null;
                 this.reader = null;
                 this.writer = null;
+                this.readableStreamClosed = null;
+                this.writableStreamClosed = null;
                 this.connected = false;
                 this.readBuffer = '';
                 
@@ -479,8 +481,8 @@
                     await this.port.open({ baudRate: 115200 });
 
                     const textEncoder = new TextEncoderStream();
+                    this.writableStreamClosed = textEncoder.readable.pipeTo(this.port.writable);
                     this.writer = textEncoder.writable.getWriter();
-                    const writableStreamClosed = textEncoder.readable.pipeTo(this.port.writable);
 
                     this.connected = true;
                     applyTranslations(); // Updates button text to DISCONNECT based on language
@@ -505,14 +507,28 @@
             }
 
             async disconnect() {
-                if (this.reader) await this.reader.cancel();
-                if (this.writer) await this.writer.close();
-                if (this.port) await this.port.close();
+                try {
+                    if (this.reader) {
+                        await this.reader.cancel();
+                        await this.readableStreamClosed.catch(() => {});
+                    }
+                    if (this.writer) {
+                        await this.writer.close();
+                        await this.writableStreamClosed.catch(() => {});
+                    }
+                    if (this.port) {
+                        await this.port.close();
+                    }
+                } catch (e) {
+                    console.error('Disconnect error:', e);
+                }
 
                 this.connected = false;
                 this.port = null;
                 this.reader = null;
                 this.writer = null;
+                this.readableStreamClosed = null;
+                this.writableStreamClosed = null;
 
                 applyTranslations(); // Updates button text to CONNECT
 
@@ -532,7 +548,7 @@
             // --- Data Handling ---
             async readLoop() {
                 const textDecoder = new TextDecoderStream();
-                this.port.readable.pipeTo(textDecoder.writable);
+                this.readableStreamClosed = this.port.readable.pipeTo(textDecoder.writable);
                 this.reader = textDecoder.readable.getReader();
 
                 try {
@@ -547,7 +563,9 @@
                 } catch (error) {
                     console.error('Read error:', error);
                     this.log('System', 'Read error. Disconnecting...', 'error');
-                    await this.disconnect();
+                    if (this.connected) {
+                        await this.disconnect();
+                    }
                 } finally {
                     if (this.reader) this.reader.releaseLock();
                 }
